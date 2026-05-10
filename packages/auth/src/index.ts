@@ -21,8 +21,14 @@ export function createAuth() {
         ? ["exp://", "exp://**", "exp://192.168.*.*:*/**", "http://localhost:8081"]
         : []),
     ],
+    socialProviders: {
+      google: {
+        clientId: env.GOOGLE_CLIENT_ID,
+        clientSecret: env.GOOGLE_CLIENT_SECRET,
+      },
+    },
     emailAndPassword: {
-      enabled: true,
+      enabled: false,
     },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
