@@ -27,6 +27,8 @@ apps/*/.env.*
 npm-debug.log*
 *.log
 
-# Tests & native app (not part of Coolify server image here)
+# Tests
 **/coverage
-apps/native/**
+
+# Keep apps/native in context: it is a Bun workspace in bun.lock; omitting it
+# makes `bun install --frozen-lockfile` fail (lockfile drift vs discovered workspaces).
