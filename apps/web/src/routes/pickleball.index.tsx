@@ -9,6 +9,7 @@ import {
   formatManilaYmd,
   formatSlotRangeLabel,
   manilaPickleballSlotStartUtc,
+  pickleballCourtDayWindowLabel,
   PICKLEBALL_SLOT_HOURS,
 } from "@/lib/manila";
 import { formatOwnerAddressTriple } from "@/lib/reservation-display";
@@ -31,7 +32,10 @@ function PickleballSchedulePage() {
   });
 
   const byHourBerth = useMemo(() => {
-    const map = new Map<number, Map<number, { id: string; addr: string | null; noShow?: boolean | null }>>();
+    const map = new Map<
+      number,
+      Map<number, { id: string; reservedByName: string | null; addr: string | null; noShow?: boolean | null }>
+    >();
     for (const h of PICKLEBALL_SLOT_HOURS) {
       map.set(h, new Map());
     }
@@ -47,6 +51,7 @@ function PickleballSchedulePage() {
           if (Number.isFinite(b) && (BERTHS as readonly number[]).includes(b)) {
             map.get(h)!.set(b, {
               id: r.id,
+              reservedByName: r.reservedByName,
               addr: formatOwnerAddressTriple(r.phase, r.block, r.lot),
               noShow: r.noShow,
             });
@@ -61,8 +66,8 @@ function PickleballSchedulePage() {
   return (
     <div className="container mx-auto max-w-lg px-4 py-6">
       <h1 className="mb-1 text-2xl font-semibold tracking-tight">Pickleball court</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
-        Hourly schedule · Philippines time (UTC+8) · 16:00–22:00 · up to four parties per hour
+      <p className="text-muted-foreground mb-6 text-sm">
+        Hourly schedule · Philippines time (UTC+8) · {pickleballCourtDayWindowLabel()} · up to four parties per hour
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -101,13 +106,24 @@ function PickleballSchedulePage() {
                       className="border-border bg-muted/20 flex flex-col gap-1 rounded-md border px-3 py-2 text-sm"
                     >
                       <div className="text-muted-foreground text-xs font-medium">Party {berth}</div>
-                      <div className={booked ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}>
+                      <div
+                        className={
+                          booked
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-muted-foreground"
+                        }
+                      >
                         {booked ? (
-                          <>
-                            Reserved
-                            {booked.noShow ? " · no-show" : ""}
-                            {booked.addr ? ` · ${booked.addr}` : ""}
-                          </>
+                          <div>
+                            <div className="text-pretty font-medium">
+                              {booked.reservedByName?.trim() || "Reserved"}
+                            </div>
+                            {(booked.noShow || booked.addr) && (
+                              <div className="mt-0.5 text-pretty text-xs font-normal">
+                                {[booked.noShow ? "No-show" : null, booked.addr].filter(Boolean).join(" · ")}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           "Available"
                         )}
@@ -121,7 +137,7 @@ function PickleballSchedulePage() {
         })}
       </div>
 
-      <p className="mt-6 text-center text-xs text-muted-foreground">
+      <p className="text-muted-foreground mt-6 text-center text-xs">
         <Link to="/" className="underline underline-offset-2">
           Tennis court schedule
         </Link>

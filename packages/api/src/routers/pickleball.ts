@@ -5,10 +5,14 @@ import { homeowners } from "@cdm-pickleball/db/schema/homeowners";
 import { pickleballReservations } from "@cdm-pickleball/db/schema/pickleball";
 import { tennisReservationManagerAllowlist } from "@cdm-pickleball/db/schema/tennis";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, gte, lte, lt } from "drizzle-orm";
-import { count } from "drizzle-orm/sql/functions/aggregate";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { z } from "zod";
 
+import type { CombinedNoShowHistoryItem } from "../homeowner-combined-no-shows";
+import {
+  countCombinedNoShowsInManilaCalendarMonth,
+  fetchCombinedNoShowHistory,
+} from "../homeowner-combined-no-shows";
 import { managerProcedure, publicProcedure, router } from "../index";
 import {
   formatManilaYmd,
@@ -60,6 +64,7 @@ export const pickleballRouter = router({
           courtBerth: pickleballReservations.courtBerth,
           noShow: pickleballReservations.noShow,
           homeownerId: pickleballReservations.homeownerId,
+          reservedByName: pickleballReservations.reservedByName,
           phase: homeowners.phase,
           block: homeowners.block,
           lot: homeowners.lot,
@@ -123,25 +128,13 @@ export const pickleballRouter = router({
         hasHomeownerRow: false as const,
         noShowsInManilaCalendarMonth: 0,
         allHistory: [] as HistRow[],
-        noShowHistory: [] as HistRow[],
+        noShowHistory: [] as CombinedNoShowHistoryItem[],
       };
     }
 
     const now = new Date();
     const monthStart = manilaCalendarMonthStartUtc(now);
-    const [noShowAgg] = await db
-      .select({ c: count() })
-      .from(pickleballReservations)
-      .where(
-        and(
-          eq(pickleballReservations.homeownerId, ho.id),
-          eq(pickleballReservations.noShow, true),
-          gte(pickleballReservations.slotStart, monthStart),
-          lte(pickleballReservations.slotStart, now),
-        ),
-      );
-
-    const noShowsInManilaCalendarMonth = Number(noShowAgg?.c ?? 0);
+    const noShowsInManilaCalendarMonth = await countCombinedNoShowsInManilaCalendarMonth(ho.id, monthStart, now);
 
     const rows = await db
       .select({
@@ -157,7 +150,7 @@ export const pickleballRouter = router({
       .orderBy(desc(pickleballReservations.slotStart), desc(pickleballReservations.courtBerth))
       .limit(200);
 
-    const noShowHistory = rows.filter((r) => r.noShow);
+    const noShowHistory = await fetchCombinedNoShowHistory(ho.id, 200);
 
     return {
       phase: input.phase,

@@ -20,6 +20,11 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
+import {
+  ManageCourtPrintPickleballButton,
+  ManageCourtPrintTennisButton,
+  clearManageCourtPrintScope,
+} from "@/components/manage-court-print-buttons";
 import { authClient } from "@/lib/auth-client";
 import { countHomeownerReservationsOnManageDay } from "@/lib/homeowner-day-reservations";
 import {
@@ -29,20 +34,34 @@ import {
   formatSlotRangeLabel,
   manilaPickleballSlotStartUtc,
   manilaSlotStartUtc,
+  pickleballCourtDayWindowLabel,
   PICKLEBALL_SLOT_HOURS,
   SLOT_HOURS,
+  tennisCourtDayWindowLabel,
 } from "@/lib/manila";
 import { formatOwnerAddressTriple } from "@/lib/reservation-display";
 import { trpc, trpcClient } from "@/utils/trpc";
 
 type TennisHist = inferRouterOutputs<AppRouter>["tennis"]["homeownerReservationHistory"];
 type PickleHist = inferRouterOutputs<AppRouter>["pickleball"]["homeownerReservationHistory"];
+type CombinedNoShowRow = TennisHist["noShowHistory"][number];
+
+function combinedNoShowCourtLabel(row: CombinedNoShowRow): string {
+  if (row.sport === "pickleball") {
+    return `Pickleball · party ${row.courtBerth}`;
+  }
+  return "Tennis";
+}
 
 export const Route = createFileRoute("/reservations/manage")({
   component: CombinedManageCourtsPage,
 });
 
 const PICKLEBALL_BERTHS = [1, 2, 3, 4] as const;
+
+/** Sticky header + six data rows; scrolls when there are more than six body rows. */
+const RESERVATION_HISTORY_TABLE_SCROLL_WRAP =
+  "border-border max-h-[calc(2.75rem+6*2.75rem)] overflow-auto border";
 
 function parsePositiveInt(raw: string): number | null {
   const n = Number(raw);
@@ -90,7 +109,7 @@ function TennisReservationHistoryTables({ hist }: { hist: TennisHist }) {
             No homeowner row for this address yet—it will be created on first booking.
           </p>
         ) : null}
-        <div className="border-border max-h-44 overflow-auto border">
+        <div className={RESERVATION_HISTORY_TABLE_SCROLL_WRAP}>
           <table className="w-full border-collapse text-xs">
             <thead className="bg-muted/80 sticky top-0">
               <tr className="border-border border-b">
@@ -129,13 +148,18 @@ function TennisReservationHistoryTables({ hist }: { hist: TennisHist }) {
       </section>
 
       <section>
-        <h4 className="mb-2 text-xs font-semibold tracking-wide uppercase">No-show history · {label}</h4>
-        <div className="border-border max-h-44 overflow-auto border">
+        <h4 className="mb-2 text-xs font-semibold tracking-wide uppercase">
+          No-show history (tennis & pickleball) · {label}
+        </h4>
+        <div className={RESERVATION_HISTORY_TABLE_SCROLL_WRAP}>
           <table className="w-full border-collapse text-xs">
             <thead className="bg-muted/80 sticky top-0">
               <tr className="border-border border-b">
                 <th scope="col" className="text-left font-medium whitespace-nowrap px-2 py-2">
                   Slot (Manila)
+                </th>
+                <th scope="col" className="text-left font-medium px-2 py-2">
+                  Court
                 </th>
                 <th scope="col" className="text-left font-medium px-2 py-2">
                   Reserved for
@@ -145,16 +169,17 @@ function TennisReservationHistoryTables({ hist }: { hist: TennisHist }) {
             <tbody>
               {hist.noShowHistory.length === 0 ? (
                 <tr>
-                  <td className="text-muted-foreground px-2 py-3 italic" colSpan={2}>
+                  <td className="text-muted-foreground px-2 py-3 italic" colSpan={3}>
                     No no-shows on record for this homeowner.
                   </td>
                 </tr>
               ) : (
                 hist.noShowHistory.map((row) => (
-                  <tr key={row.id} className="border-border border-b last:border-0">
+                  <tr key={`${row.sport}-${row.id}`} className="border-border border-b last:border-0">
                     <td className="text-muted-foreground whitespace-nowrap px-2 py-2 align-top">
                       {formatReservationSlotLabel(row.slotStart)}
                     </td>
+                    <td className="px-2 py-2 align-top whitespace-nowrap">{combinedNoShowCourtLabel(row)}</td>
                     <td className="px-2 py-2 align-top">{formatPartyLine(row.reservedByName, row.reservedByContact) ?? "—"}</td>
                   </tr>
                 ))
@@ -179,7 +204,7 @@ function PickleballReservationHistoryTables({ hist }: { hist: PickleHist }) {
             No homeowner row for this address yet—it will be created on first booking.
           </p>
         ) : null}
-        <div className="border-border max-h-44 overflow-auto border">
+        <div className={RESERVATION_HISTORY_TABLE_SCROLL_WRAP}>
           <table className="w-full border-collapse text-xs">
             <thead className="bg-muted/80 sticky top-0">
               <tr className="border-border border-b">
@@ -224,16 +249,18 @@ function PickleballReservationHistoryTables({ hist }: { hist: PickleHist }) {
       </section>
 
       <section>
-        <h4 className="mb-2 text-xs font-semibold tracking-wide uppercase">No-show history · {label}</h4>
-        <div className="border-border max-h-44 overflow-auto border">
+        <h4 className="mb-2 text-xs font-semibold tracking-wide uppercase">
+          No-show history (tennis & pickleball) · {label}
+        </h4>
+        <div className={RESERVATION_HISTORY_TABLE_SCROLL_WRAP}>
           <table className="w-full border-collapse text-xs">
             <thead className="bg-muted/80 sticky top-0">
               <tr className="border-border border-b">
                 <th scope="col" className="text-left font-medium whitespace-nowrap px-2 py-2">
                   Slot (Manila)
                 </th>
-                <th scope="col" className="text-center font-medium whitespace-nowrap px-2 py-2">
-                  Party
+                <th scope="col" className="text-left font-medium px-2 py-2">
+                  Court
                 </th>
                 <th scope="col" className="text-left font-medium px-2 py-2">
                   Reserved for
@@ -249,11 +276,11 @@ function PickleballReservationHistoryTables({ hist }: { hist: PickleHist }) {
                 </tr>
               ) : (
                 hist.noShowHistory.map((row) => (
-                  <tr key={row.id} className="border-border border-b last:border-0">
+                  <tr key={`${row.sport}-${row.id}`} className="border-border border-b last:border-0">
                     <td className="text-muted-foreground whitespace-nowrap px-2 py-2 align-top">
                       {formatReservationSlotLabel(row.slotStart)}
                     </td>
-                    <td className="text-center px-2 py-2 align-top">{row.courtBerth}</td>
+                    <td className="px-2 py-2 align-top whitespace-nowrap">{combinedNoShowCourtLabel(row)}</td>
                     <td className="px-2 py-2 align-top">
                       {formatPartyLine(row.reservedByName, row.reservedByContact) ?? "—"}
                     </td>
@@ -420,6 +447,14 @@ function CombinedManageCourtsPage() {
     },
     onError: (err) => toast.error(err.message),
   });
+
+  useEffect(() => {
+    window.addEventListener("afterprint", clearManageCourtPrintScope);
+    return () => {
+      window.removeEventListener("afterprint", clearManageCourtPrintScope);
+      clearManageCourtPrintScope();
+    };
+  }, []);
 
   useEffect(() => {
     if (tennisHist === null) return;
@@ -606,7 +641,13 @@ function CombinedManageCourtsPage() {
   type TennisRow = NonNullable<(typeof tennisListQ)["data"]>["reservations"][number];
   const tennisByHour = new Map<
     number,
-    { id: string; addr: string | null; party: string | null; noShow: boolean | null | undefined }
+    {
+      id: string;
+      addr: string | null;
+      reservedByName: string | null;
+      reservedByContact: string | null;
+      noShow: boolean | null | undefined;
+    }
   >();
   if (tennisListQ.data?.reservations) {
     for (const r of tennisListQ.data.reservations as TennisRow[]) {
@@ -616,7 +657,8 @@ function CombinedManageCourtsPage() {
           tennisByHour.set(h, {
             id: r.id,
             addr: formatOwnerAddressTriple(r.phase, r.block, r.lot),
-            party: formatPartyLine(r.reservedByName, r.reservedByContact),
+            reservedByName: r.reservedByName,
+            reservedByContact: r.reservedByContact,
             noShow: r.noShow,
           });
           break;
@@ -628,7 +670,16 @@ function CombinedManageCourtsPage() {
   type PickleRow = NonNullable<(typeof pickleListQ)["data"]>["reservations"][number];
   const pbByHourBerth = new Map<
     number,
-    Map<number, { id: string; addr: string | null; party: string | null; noShow: boolean | null | undefined }>
+    Map<
+      number,
+      {
+        id: string;
+        addr: string | null;
+        reservedByName: string | null;
+        reservedByContact: string | null;
+        noShow: boolean | null | undefined;
+      }
+    >
   >();
   for (const h of PICKLEBALL_SLOT_HOURS) {
     pbByHourBerth.set(h, new Map());
@@ -643,7 +694,8 @@ function CombinedManageCourtsPage() {
             pbByHourBerth.get(h)!.set(b, {
               id: r.id,
               addr: formatOwnerAddressTriple(r.phase, r.block, r.lot),
-              party: formatPartyLine(r.reservedByName, r.reservedByContact),
+              reservedByName: r.reservedByName,
+              reservedByContact: r.reservedByContact,
               noShow: r.noShow,
             });
           }
@@ -684,16 +736,17 @@ function CombinedManageCourtsPage() {
   const showPbFairAccessWarn = pbReserveOpen && pbSearchReady && pbSameDayCount >= 1;
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6">
-      <h1 className="text-balance text-2xl leading-snug font-semibold">
+    <div className="schedule-print-root container mx-auto max-w-lg px-4 py-6 print:max-w-none">
+      <h1 className="text-balance text-2xl leading-snug font-semibold print:text-neutral-900">
         Manage courts for {dateHeading}
       </h1>
-      <p className="text-muted-foreground mt-3 text-sm">
-        Manila calendar date (Asia/Manila): tennis hourly blocks 06:00–16:00 wall time, pickleball 16:00–22:00. One date
-        picker controls both grids. On first booking for an address we create its homeowner row.
+      <p className="text-muted-foreground mt-3 text-sm print:hidden">
+        Manila calendar date (Asia/Manila): tennis hourly blocks {tennisCourtDayWindowLabel()} wall time, pickleball{" "}
+        {pickleballCourtDayWindowLabel()}. One date picker controls both grids. On first booking for an address we
+        create its homeowner row.
       </p>
 
-      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between print:hidden">
         <div className="space-y-1.5">
           <Label htmlFor="courts-date-picker" className="flex items-center gap-2 text-muted-foreground">
             <CalendarDays className="size-3.5 shrink-0" />
@@ -707,42 +760,54 @@ function CombinedManageCourtsPage() {
             onChange={(e) => setDateOverride(e.target.value)}
           />
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="-ml-2 self-start sm:self-auto"
-          onClick={() => setDateOverride(null)}
-          disabled={!todayQ.data}
-        >
-          Today in Manila
-        </Button>
+        <div className="-ml-2 flex flex-wrap items-center gap-2 sm:self-auto">
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDateOverride(null)} disabled={!todayQ.data}>
+            Today in Manila
+          </Button>
+          <ManageCourtPrintTennisButton />
+          <ManageCourtPrintPickleballButton />
+        </div>
       </div>
 
+      <div id="manage-tennis-print-section">
       {/* Tennis */}
-      <h2 id="tennis-manage-section" className="mt-12 scroll-mt-6 text-xl font-semibold tracking-tight">
+      <h2 id="tennis-manage-section" className="mt-12 scroll-mt-6 text-xl font-semibold tracking-tight print:text-neutral-900">
         Tennis court
       </h2>
-      <p className="text-muted-foreground mt-1 text-sm">One reservation per hourly slot · 06:00–16:00 Manila wall time.</p>
+      <p className="text-muted-foreground mt-1 text-sm print:text-neutral-600">
+        One reservation per hourly slot · {tennisCourtDayWindowLabel()} Manila wall time.
+      </p>
 
       <div className="mt-6 grid gap-2">
         {SLOT_HOURS.map((hour) => {
           const booked = tennisByHour.get(hour);
           return (
-            <Card key={`t-${hour}`} className="flex flex-row flex-wrap items-center justify-between gap-2 p-4">
+            <Card
+              key={`t-${hour}`}
+              className="flex flex-row flex-wrap items-center justify-between gap-2 p-4 print:break-inside-avoid print:bg-white print:text-neutral-950 print:ring-neutral-400"
+            >
               <div>
                 <div className="font-medium">{formatSlotRangeLabel(hour)}</div>
-                {booked?.party ? <div className="mt-1 text-xs">{booked.party}</div> : null}
+                {booked?.reservedByName?.trim() ? (
+                  <div className="mt-1 text-sm font-medium">{booked.reservedByName.trim()}</div>
+                ) : null}
+                {booked?.reservedByContact?.trim() ? (
+                  <div className="text-muted-foreground mt-0.5 text-xs">
+                    Phone: {booked.reservedByContact.trim()}
+                  </div>
+                ) : null}
                 {booked?.addr ? (
                   <div className="text-muted-foreground mt-1 text-xs">
                     {booked.addr}
                     {booked.noShow ? " · no-show" : ""}
                   </div>
                 ) : booked ? (
-                  <div className="text-muted-foreground mt-1 text-xs italic">Legacy reservation · no address on file</div>
+                  <div className="text-muted-foreground mt-1 text-xs italic">
+                    {(booked.noShow ? "No-show · " : "") + "Legacy reservation · no address on file"}
+                  </div>
                 ) : null}
               </div>
-              <div className="flex flex-wrap justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2 print:hidden">
                 {booked ? (
                   <>
                     <Button
@@ -768,6 +833,7 @@ function CombinedManageCourtsPage() {
                   <Button
                     type="button"
                     size="sm"
+                    className="print:hidden"
                     disabled={tennisListQ.isLoading}
                     onClick={() => openTennisReserve(hour)}
                   >
@@ -780,17 +846,24 @@ function CombinedManageCourtsPage() {
         })}
       </div>
 
-      {/* Pickleball */}
-      <h2 id="pickleball-manage-section" className="mt-14 scroll-mt-6 text-xl font-semibold tracking-tight">
+      </div>
+
+      <div id="manage-pickleball-print-section">
+      <h2
+        id="pickleball-manage-section"
+        className="mt-14 scroll-mt-6 text-xl font-semibold tracking-tight print:text-neutral-900"
+      >
         Pickleball court
       </h2>
-      <p className="text-muted-foreground mt-1 text-sm">Up to four parties per hour · 16:00–22:00 Manila wall time.</p>
+      <p className="text-muted-foreground mt-1 text-sm print:text-neutral-600">
+        Up to four parties per hour · {pickleballCourtDayWindowLabel()} Manila wall time.
+      </p>
 
       <div className="mt-6 grid gap-3">
         {PICKLEBALL_SLOT_HOURS.map((hour) => {
           const berthMap = pbByHourBerth.get(hour) ?? new Map();
           return (
-            <Card key={`pb-${hour}`} className="p-4">
+            <Card key={`pb-${hour}`} className="p-4 print:break-inside-avoid print:bg-white print:text-neutral-950 print:ring-neutral-400">
               <div className="mb-3 font-medium">{formatSlotRangeLabel(hour)}</div>
               <div className="grid gap-2 sm:grid-cols-2">
                 {PICKLEBALL_BERTHS.map((berth) => {
@@ -798,21 +871,30 @@ function CombinedManageCourtsPage() {
                   return (
                     <div
                       key={`${hour}-${berth}`}
-                      className="border-border flex flex-col gap-2 rounded-md border bg-muted/10 px-3 py-3"
+                      className="border-border flex flex-col gap-2 rounded-md border bg-muted/10 px-3 py-3 print:break-inside-avoid print:border-neutral-400 print:bg-white"
                     >
                       <div className="text-muted-foreground text-xs font-medium">Party {berth}</div>
                       {booked ? (
                         <>
-                          {booked.party ? <div className="text-sm">{booked.party}</div> : null}
+                          {booked.reservedByName?.trim() ? (
+                            <div className="text-sm font-medium">{booked.reservedByName.trim()}</div>
+                          ) : null}
+                          {booked.reservedByContact?.trim() ? (
+                            <div className="text-muted-foreground text-xs">
+                              Phone: {booked.reservedByContact.trim()}
+                            </div>
+                          ) : null}
                           {booked.addr ? (
                             <div className="text-muted-foreground text-xs">
                               {booked.addr}
                               {booked.noShow ? " · no-show" : ""}
                             </div>
                           ) : (
-                            <div className="text-muted-foreground text-xs italic">Legacy · no address on file</div>
+                            <div className="text-muted-foreground text-xs italic">
+                              {(booked.noShow ? "No-show · " : "") + "Legacy · no address on file"}
+                            </div>
                           )}
-                          <div className="mt-1 flex flex-wrap gap-2">
+                          <div className="mt-1 flex flex-wrap gap-2 print:hidden">
                             <Button
                               type="button"
                               variant="outline"
@@ -837,7 +919,7 @@ function CombinedManageCourtsPage() {
                         <Button
                           type="button"
                           size="sm"
-                          className="self-start"
+                          className="self-start print:hidden"
                           disabled={pickleListQ.isLoading}
                           onClick={() => openPbReserve(hour, berth)}
                         >
@@ -851,6 +933,7 @@ function CombinedManageCourtsPage() {
             </Card>
           );
         })}
+      </div>
       </div>
 
       {/* Tennis reserve dialog */}

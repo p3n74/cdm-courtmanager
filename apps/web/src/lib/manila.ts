@@ -6,6 +6,40 @@ export const SLOT_HOURS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15] as const;
 /** Pickleball: 16:00–22:00 Manila (hour starts 16–21). */
 export const PICKLEBALL_SLOT_HOURS = [16, 17, 18, 19, 20, 21] as const;
 
+const manilaWallClockFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Manila",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/** Formats a Manila wall-clock hour integer (e.g. 6 → "6:00 AM"). */
+export function formatManilaWallHourStart(slotHour: number): string {
+  const h = String(slotHour).padStart(2, "0");
+  return manilaWallClockFormatter.format(new Date(`2000-01-01T${h}:00:00${MANILA_OFFSET}`));
+}
+
+/** One-hour block label, e.g. "6:00 AM–7:00 AM". */
+export function formatSlotRangeLabel(slotHour: number): string {
+  return `${formatManilaWallHourStart(slotHour)}–${formatManilaWallHourStart(slotHour + 1)}`;
+}
+
+/** Full-day window for blurbs, e.g. tennis 6:00 AM–4:00 PM. */
+export function formatCourtDayWindowLabel(startHour: number, endHourExclusive: number): string {
+  return `${formatManilaWallHourStart(startHour)}–${formatManilaWallHourStart(endHourExclusive)}`;
+}
+
+export function tennisCourtDayWindowLabel(): string {
+  return formatCourtDayWindowLabel(SLOT_HOURS[0], SLOT_HOURS[SLOT_HOURS.length - 1] + 1);
+}
+
+export function pickleballCourtDayWindowLabel(): string {
+  return formatCourtDayWindowLabel(
+    PICKLEBALL_SLOT_HOURS[0],
+    PICKLEBALL_SLOT_HOURS[PICKLEBALL_SLOT_HOURS.length - 1] + 1,
+  );
+}
+
 const ymdFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Manila",
   year: "numeric",
@@ -50,12 +84,6 @@ export function manilaPickleballSlotStartUtc(dateYmd: string, slotHour: number):
   return new Date(`${dateYmd}T${h}:00:00${MANILA_OFFSET}`);
 }
 
-export function formatSlotRangeLabel(slotHour: number): string {
-  const next = slotHour + 1;
-  return `${String(slotHour).padStart(2, "0")}:00–${String(next).padStart(2, "0")}:00`;
-}
-
-/** Manila wall date + time label for a stored reservation instant. */
 export function formatReservationSlotLabel(slotStart: Date | string): string {
   const d = typeof slotStart === "string" ? new Date(slotStart) : slotStart;
   const ymd = formatManilaYmd(d);
@@ -69,6 +97,8 @@ export function formatReservationSlotLabel(slotStart: Date | string): string {
     Number.isFinite(hour) &&
     ((SLOT_HOURS as readonly number[]).includes(hour) ||
       (PICKLEBALL_SLOT_HOURS as readonly number[]).includes(hour));
-  const timePart = isKnownHour ? formatSlotRangeLabel(hour) : `${hourRaw.padStart(2, "0")}:00`;
+  const timePart = isKnownHour
+    ? formatSlotRangeLabel(hour)
+    : manilaWallClockFormatter.format(d);
   return `${formatManilaLongDate(ymd)} · ${timePart}`;
 }

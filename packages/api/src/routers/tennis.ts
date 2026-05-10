@@ -4,10 +4,14 @@ import { db } from "@cdm-pickleball/db";
 import { homeowners } from "@cdm-pickleball/db/schema/homeowners";
 import { tennisReservationManagerAllowlist, tennisReservations } from "@cdm-pickleball/db/schema/tennis";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, gte, lte, lt } from "drizzle-orm";
-import { count } from "drizzle-orm/sql/functions/aggregate";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { z } from "zod";
 
+import type { CombinedNoShowHistoryItem } from "../homeowner-combined-no-shows";
+import {
+  countCombinedNoShowsInManilaCalendarMonth,
+  fetchCombinedNoShowHistory,
+} from "../homeowner-combined-no-shows";
 import { managerProcedure, publicProcedure, router } from "../index";
 import { formatManilaYmd, manilaCalendarMonthStartUtc, manilaDayBoundsUtc, manilaSlotStartUtc } from "../manila";
 
@@ -52,6 +56,7 @@ export const tennisRouter = router({
           slotStart: tennisReservations.slotStart,
           noShow: tennisReservations.noShow,
           homeownerId: tennisReservations.homeownerId,
+          reservedByName: tennisReservations.reservedByName,
           phase: homeowners.phase,
           block: homeowners.block,
           lot: homeowners.lot,
@@ -62,7 +67,7 @@ export const tennisRouter = router({
       return { date: input.date, reservations: rows };
     }),
 
-  /** Managers only: same as `listDay` plus per-reservation contact (not exposed on the public schedule). */
+  /** Managers only: same as `listDay` plus per-reservation phone/contact (not exposed on the public schedule). */
   listManageDay: managerProcedure
     .input(z.object({ date: dateYmd }))
     .query(async ({ input }) => {
@@ -116,31 +121,13 @@ export const tennisRouter = router({
           reservedByName: string;
           reservedByContact: string;
         }[],
-        noShowHistory: [] as {
-          id: string;
-          slotStart: Date;
-          noShow: boolean;
-          reservedByName: string;
-          reservedByContact: string;
-        }[],
+        noShowHistory: [] as CombinedNoShowHistoryItem[],
       };
     }
 
     const now = new Date();
     const monthStart = manilaCalendarMonthStartUtc(now);
-    const [noShowAgg] = await db
-      .select({ c: count() })
-      .from(tennisReservations)
-      .where(
-        and(
-          eq(tennisReservations.homeownerId, ho.id),
-          eq(tennisReservations.noShow, true),
-          gte(tennisReservations.slotStart, monthStart),
-          lte(tennisReservations.slotStart, now),
-        ),
-      );
-
-    const noShowsInManilaCalendarMonth = Number(noShowAgg?.c ?? 0);
+    const noShowsInManilaCalendarMonth = await countCombinedNoShowsInManilaCalendarMonth(ho.id, monthStart, now);
 
     const rows = await db
       .select({
@@ -155,7 +142,7 @@ export const tennisRouter = router({
       .orderBy(desc(tennisReservations.slotStart))
       .limit(200);
 
-    const noShowHistory = rows.filter((r) => r.noShow);
+    const noShowHistory = await fetchCombinedNoShowHistory(ho.id, 200);
 
     return {
       phase: input.phase,

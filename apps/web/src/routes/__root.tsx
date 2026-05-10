@@ -46,14 +46,18 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid grid-rows-[auto_1fr] h-svh">
+        <div className="grid h-svh grid-rows-[auto_1fr] print:h-auto print:min-h-0">
           <Header />
           <Outlet />
         </div>
-        <Toaster richColors />
+        <div className="print:hidden">
+          <Toaster richColors />
+        </div>
       </ThemeProvider>
-      <TanStackRouterDevtools position="bottom-left" />
-      <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+      <div className="print:hidden">
+        <TanStackRouterDevtools position="bottom-left" />
+        <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+      </div>
     </>
   );
 }

@@ -1,1 +1,40 @@
 @import "@cdm-pickleball/ui/globals.css";
+
+@layer base {
+  @media print {
+    @page {
+      margin: 12mm;
+    }
+  }
+}
+
+@media print {
+  [data-slot="radix-toaster"],
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  [data-slot="dialog-portal"] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: white !important;
+  }
+
+  /* Light, readable schedules when printing from dark mode */
+  .schedule-print-root {
+    background: white !important;
+    color: #171717 !important;
+  }
+
+  .schedule-print-root .text-muted-foreground {
+    color: #525252 !important;
+  }
+
+  html[data-manage-print-scope="tennis"] #manage-pickleball-print-section,
+  html[data-manage-print-scope="pickleball"] #manage-tennis-print-section {
+    display: none !important;
+  }
+}
