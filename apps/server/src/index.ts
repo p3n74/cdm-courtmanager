@@ -6,7 +6,7 @@ import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { join, resolve, sep } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const app = new Hono();
@@ -54,6 +54,37 @@ function safePathUnderRoot(root: string, relativePath: string): string | null {
   return null;
 }
 
+/** Explicit types so browsers accept `type="module"` scripts behind proxies that strip Bun's inferred type. */
+const STATIC_MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".mjs": "application/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".ttf": "font/ttf",
+  ".map": "application/json; charset=utf-8",
+};
+
+function contentTypeForPath(filePath: string): string {
+  const ext = extname(filePath).toLowerCase();
+  return STATIC_MIME[ext] ?? "application/octet-stream";
+}
+
+function hasKnownStaticExtension(relativePath: string): boolean {
+  const ext = extname(relativePath).toLowerCase();
+  return ext !== "" && ext in STATIC_MIME;
+}
+
+function looksLikeStaticAsset(relativePath: string): boolean {
+  return relativePath.startsWith("assets/") || relativePath === "favicon.svg";
+}
+
 if (env.NODE_ENV === "production") {
   const webDist = resolveWebDistRoot();
 
@@ -73,8 +104,19 @@ if (env.NODE_ENV === "production") {
     if (allowed) {
       const file = Bun.file(allowed);
       if (await file.exists()) {
-        return new Response(file);
+        const type = contentTypeForPath(allowed);
+        return new Response(file, {
+          headers: { "Content-Type": type },
+        });
       }
+    }
+
+    // Missing hashed chunks must not fall back to index.html — that yields wrong MIME / blank type and obscure errors.
+    if (looksLikeStaticAsset(relative) || hasKnownStaticExtension(relative)) {
+      return new Response("Not found", {
+        status: 404,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
     }
 
     const indexAllowed = safePathUnderRoot(webDist, "index.html");
