@@ -16,7 +16,8 @@
     "db:migrate": "bun --env-file=../../apps/server/.env run scripts/run-migrations.ts",
     "db:stamp-pickleball-migrations": "bun --env-file=../../apps/server/.env run scripts/stamp-pickleball-migrations.ts",
     "db:baseline-migrations": "bun --env-file=../../apps/server/.env run scripts/baseline-drizzle-migrations.ts",
-    "db:seed:reservation-manager": "bun --env-file=../../apps/server/.env run scripts/seed-first-reservation-manager.ts"
+    "db:seed:reservation-manager": "bun --env-file=../../apps/server/.env run scripts/seed-first-reservation-manager.ts",
+    "db:seed:schedule-demo": "bun --env-file=../../apps/server/.env run scripts/seed-schedule-demo-data.ts"
   },
   "dependencies": {
     "@cdm-pickleball/env": "workspace:*",

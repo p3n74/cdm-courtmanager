@@ -5,6 +5,7 @@ import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import Header from "@/components/header";
+import SiteFooter from "@/components/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import type { trpc } from "@/utils/trpc";
 
@@ -20,11 +21,12 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
-        title: "cdm-pickleball",
+        title: "Corona Del Mar Clubhouse · Tennis & pickleball",
       },
       {
         name: "description",
-        content: "cdm-pickleball is a web application",
+        content:
+          "Corona Del Mar Clubhouse community courts—tennis and pickleball schedules together in Manila time.",
       },
     ],
     links: [
@@ -40,15 +42,13 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        disableTransitionOnChange
-        storageKey="vite-ui-theme"
-      >
-        <div className="grid h-svh grid-rows-[auto_1fr] print:h-auto print:min-h-0">
+      <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange storageKey="vite-ui-theme">
+        <div className="flex min-h-svh flex-col print:h-auto print:min-h-0">
           <Header />
-          <Outlet />
+          <div className="tropical-page-gradient flex min-h-0 min-w-0 w-full flex-1 flex-col print:bg-white">
+            <Outlet />
+          </div>
+          <SiteFooter />
         </div>
         <div className="print:hidden">
           <Toaster richColors />

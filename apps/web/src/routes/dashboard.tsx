@@ -116,7 +116,7 @@ function RouteComponent() {
         </p>
         <div className="mt-8 flex flex-col gap-2 sm:flex-row">
           <Link
-            to="/"
+            to="/tennis"
             className="text-primary text-sm font-medium underline-offset-4 hover:underline"
           >
             Tennis schedule

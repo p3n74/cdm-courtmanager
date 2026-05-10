@@ -35,7 +35,8 @@
     "db:generate": "turbo -F @cdm-pickleball/db db:generate",
     "db:migrate": "turbo -F @cdm-pickleball/db db:migrate",
     "db:stamp-pickleball-migrations": "turbo -F @cdm-pickleball/db db:stamp-pickleball-migrations",
-    "db:baseline-migrations": "turbo -F @cdm-pickleball/db db:baseline-migrations"
+    "db:baseline-migrations": "turbo -F @cdm-pickleball/db db:baseline-migrations",
+    "db:seed:schedule-demo": "turbo -F @cdm-pickleball/db db:seed:schedule-demo"
   },
   "dependencies": {
     "@cdm-pickleball/env": "workspace:*",

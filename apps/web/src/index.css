@@ -21,6 +21,11 @@
   html,
   body {
     background: white !important;
+    background-attachment: scroll !important;
+  }
+
+  .tropical-page-gradient {
+    background-attachment: scroll !important;
   }
 
   /* Light, readable schedules when printing from dark mode */
