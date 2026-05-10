@@ -1,0 +1,32 @@
+# Dependencies & caches
+**/node_modules
+**/.turbo
+**/.cache
+
+# Build outputs (fresh build inside Docker)
+**/dist
+apps/web/dist
+apps/server/dist
+
+# Repo metadata
+.git
+.github
+.idea
+.vscode
+.winnow
+
+# Env & secrets — Coolify injects at runtime / build-arg for VITE_*
+.env
+.env.*
+!.env.example
+apps/*/.env
+apps/*/.env.*
+!apps/*/.env.example
+
+# Logs & tooling
+npm-debug.log*
+*.log
+
+# Tests & native app (not part of Coolify server image here)
+**/coverage
+apps/native/**
