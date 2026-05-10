@@ -117,11 +117,11 @@ if (env.NODE_ENV === "production") {
           "Content-Type": type,
           "X-Content-Type-Options": "nosniff",
         };
-        // Hashed bundles must stay cacheable; HTML must stay fresh or stale index breaks chunk URLs → MIME errors.
+        // Hashed bundles are safe to cache; HTML must not be reused across deploys.
         if (relative.startsWith("assets/")) {
           headers["Cache-Control"] = "public, max-age=31536000, immutable";
         } else if (relative === "index.html" || pathname === "/" || !hasKnownStaticExtension(relative)) {
-          headers["Cache-Control"] = "no-cache";
+          headers["Cache-Control"] = "no-store, max-age=0";
         }
         return new Response(body, { headers });
       }
@@ -144,7 +144,7 @@ if (env.NODE_ENV === "production") {
           status: 200,
           headers: {
             "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-store, max-age=0",
             "X-Content-Type-Options": "nosniff",
           },
         });

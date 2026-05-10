@@ -1,13 +1,8 @@
 # syntax=docker/dockerfile:1.7
 #
 # Production image: Vite SPA (apps/web) + Hono API (apps/server), Bun + Turborepo.
-# Full workspace is kept so you can `docker exec` into the running container.
-#
-# Drizzle migrations (only DATABASE_URL required):
-#   DATABASE_URL="$DATABASE_URL" bun run --cwd packages/db scripts/run-migrations.ts
-#
-# Local-style DB scripts still use `bun run --cwd packages/db db:migrate:dotenv` etc.
-# Seeds that import `createDb()` need the same server env vars as runtime (see Coolify env).
+# The runner intentionally contains only the compiled server, compiled web assets,
+# and production node_modules. Database/admin scripts are not shipped in the image.
 #
 # Coolify health check: GET /healthz
 #
@@ -53,7 +48,7 @@ RUN if [ -z "${VITE_SERVER_URL}" ]; then echo "BUILD ERROR: pass --build-arg VIT
 RUN bunx turbo build --filter=server --filter=web
 
 ############################
-# 3. Runner (full workspace + deps for db scripts / exec)
+# 3. Runner (compiled server + web assets only)
 ############################
 FROM base AS runner
 WORKDIR /app
@@ -64,10 +59,13 @@ ENV HOSTNAME=0.0.0.0
 
 RUN addgroup -S bunapp && adduser -S bunapp -G bunapp
 
-COPY --from=builder --chown=bunapp:bunapp /app /app
+COPY --from=builder --chown=bunapp:bunapp /app/node_modules /app/node_modules
+COPY --from=builder --chown=bunapp:bunapp /app/apps/server/node_modules /app/apps/server/node_modules
+COPY --from=builder --chown=bunapp:bunapp /app/apps/server/dist /app/apps/server/dist
+COPY --from=builder --chown=bunapp:bunapp /app/apps/web/dist /app/apps/web/dist
 
 USER bunapp
 EXPOSE 3000
 
 # Hono listens on HOSTNAME + PORT (see apps/server/src/index.ts). Static files: apps/web/dist.
-CMD ["bun", "run", "--cwd", "apps/server", "dist/index.mjs"]
+CMD ["bun", "/app/apps/server/dist/index.mjs"]
