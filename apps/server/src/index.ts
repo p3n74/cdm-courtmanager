@@ -12,15 +12,22 @@ import { fileURLToPath } from "node:url";
 const app = new Hono();
 
 app.use(logger());
-app.use(
-  "/*",
-  cors({
-    origin: env.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  }),
-);
+
+const apiCors = cors({
+  origin: env.CORS_ORIGIN,
+  allowMethods: ["GET", "POST", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+});
+
+// Only API routes need CORS; applying `/*` can confuse some proxies with static module scripts.
+app.use("*", async (c, next) => {
+  const p = c.req.path;
+  if (p.startsWith("/api") || p.startsWith("/trpc")) {
+    return apiCors(c, next);
+  }
+  return next();
+});
 
 app.get("/healthz", (c) => c.json({ ok: true }));
 
@@ -105,9 +112,18 @@ if (env.NODE_ENV === "production") {
       const file = Bun.file(allowed);
       if (await file.exists()) {
         const type = contentTypeForPath(allowed);
-        return new Response(file, {
-          headers: { "Content-Type": type },
-        });
+        const body = await file.arrayBuffer();
+        const headers: Record<string, string> = {
+          "Content-Type": type,
+          "X-Content-Type-Options": "nosniff",
+        };
+        // Hashed bundles must stay cacheable; HTML must stay fresh or stale index breaks chunk URLs → MIME errors.
+        if (relative.startsWith("assets/")) {
+          headers["Cache-Control"] = "public, max-age=31536000, immutable";
+        } else if (relative === "index.html" || pathname === "/" || !hasKnownStaticExtension(relative)) {
+          headers["Cache-Control"] = "no-cache";
+        }
+        return new Response(body, { headers });
       }
     }
 
@@ -123,9 +139,14 @@ if (env.NODE_ENV === "production") {
     if (indexAllowed) {
       const index = Bun.file(indexAllowed);
       if (await index.exists()) {
-        return new Response(index, {
+        const body = await index.arrayBuffer();
+        return new Response(body, {
           status: 200,
-          headers: { "Content-Type": "text/html; charset=utf-8" },
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache",
+            "X-Content-Type-Options": "nosniff",
+          },
         });
       }
     }
