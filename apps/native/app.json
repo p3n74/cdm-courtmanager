@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "scheme": "cdm-pickleball",
+    "userInterfaceStyle": "automatic",
+    "orientation": "default",
+    "web": {
+      "bundler": "metro"
+    },
+    "name": "cdm-pickleball",
+    "slug": "cdm-pickleball",
+    "plugins": ["expo-font"],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@cdm-pickleball/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@cdm-pickleball/auth": "workspace:*",
+    "@cdm-pickleball/db": "workspace:*",
+    "@cdm-pickleball/env": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cdm-pickleball/config": "workspace:*",
+    "hono": "catalog:",
+    "typescript": "^6"
+  }
+}

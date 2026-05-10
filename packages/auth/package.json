@@ -1,0 +1,25 @@
+{
+  "name": "@cdm-pickleball/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@better-auth/expo": "catalog:",
+    "@cdm-pickleball/db": "workspace:*",
+    "@cdm-pickleball/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cdm-pickleball/config": "workspace:*",
+    "typescript": "^6"
+  }
+}
