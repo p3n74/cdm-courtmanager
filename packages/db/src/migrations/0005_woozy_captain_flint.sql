@@ -1,0 +1,2 @@
+ALTER TABLE "pickleball_reservations" DROP CONSTRAINT "pickleball_reservations_court_berth_ok";--> statement-breakpoint
+ALTER TABLE "pickleball_reservations" ADD CONSTRAINT "pickleball_reservations_court_berth_ok" CHECK ("pickleball_reservations"."court_berth" >= 1 AND "pickleball_reservations"."court_berth" <= 4);
